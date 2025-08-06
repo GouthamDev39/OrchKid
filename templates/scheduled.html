@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Scheduled Jobs{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Scheduled Jobs</h1>
+
+<a href="/schedule_job_ui" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add New Job</a>
+
+<div id="job-container" class="overflow-x-auto">
+    <div class="text-gray-600">Loading scheduled jobs...</div>
+</div>
+
+<script>
+const token = localStorage.getItem('access_token');
+if (!token) {
+    window.location.href = '/login';
+} else {
+    fetch('scripts/v1/schedule/all', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Failed to fetch scheduled jobs');
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (!data.length) {
+            document.getElementById("job-container").innerHTML = '<div class="text-gray-600">No scheduled jobs found.</div>';
+            return;
+        }
+
+        const table = `
+        <table class="min-w-full bg-white shadow-md rounded border border-gray-200">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-4 py-2 text-left">ID</th>
+                    <th class="px-4 py-2 text-left">Script ID</th>
+                    <th class="px-4 py-2 text-left">Cron</th>
+                    <th class="px-4 py-2 text-left">One-Time</th>
+                    <th class="px-4 py-2 text-left">Active</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.map(job => `
+                    <tr class="border-t">
+                        <td class="px-4 py-2 text-blue-600 underline hover:text-blue-800">
+                            <a href="/schedule/${job.id}">${job.id}</a>
+                        </td>
+                        <td class="px-4 py-2 text-blue-600 underline hover:text-blue-800">
+                            <a href="/script/${job.script_id}">${job.script_id}</a>
+                        </td>
+                        <td class="px-4 py-2">${job.cron_expression || "-"}</td>
+                        <td class="px-4 py-2">${job.one_time_run || "-"}</td>
+                        <td class="px-4 py-2">${job.is_active ? "Yes" : "No"}</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+        `;
+
+        document.getElementById("job-container").innerHTML = table;
+    })
+    .catch(err => {
+        document.getElementById("job-container").innerHTML = `<div class="text-red-600">Error: ${err.message}</div>`;
+    });
+}
+</script>
+{% endblock %}

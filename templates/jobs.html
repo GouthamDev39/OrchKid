@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Server List{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Job Status</h1>
+
+<div id="server-container" class="overflow-x-auto">
+    <div class="text-gray-600">Loading servers...</div>
+</div>
+
+<script>
+const token = localStorage.getItem('access_token');
+if (!token) {
+    window.location.href = '/login';
+} else {
+    fetch('/jobs/v1/all', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Failed to fetch jobs');
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (!data.length) {
+            document.getElementById("server-container").innerHTML = '<div class="text-gray-600">No servers found.</div>';
+            return;
+        }
+
+        const table = `
+        <table class="min-w-full bg-white shadow-md rounded border border-gray-200">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-4 py-2 text-left">ID</th>
+                    <th class="px-4 py-2 text-left">Job ID</th> 
+                    <th class="px-4 py-2 text-left">Hostname</th>
+                    <th class="px-4 py-2 text-left">Username</th>
+                    <th class="px-4 py-2 text-left">Command Run</th>
+                    <th class="px-4 py-2 text-left">Command Description</th>
+                    <th class="px-4 py-2 text-left">Command Status</th>
+                    <th class="px-4 py-2 text-left">Runner</th>
+                    
+                </tr>
+            </thead>
+            <tbody>
+                ${data.map(job => `
+                    <tr class="border-t">
+                        <td class="px-4 py-2">${job.id}</td>
+                        <td class="px-4 py-2">${job.job_id}</td>
+                        <td class="px-4 py-2">${job.hostname}</td>
+                        <td class="px-4 py-2">${job.username}</td>
+                        <td class="px-4 py-2">${job.command}</td>
+                        <td class="px-4 py-2">${job.command_description}</td>
+                        <td class="px-4 py-2">${job.command_status}</td>
+                        <td class="px-4 py-2">${job.runner}</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+        `;
+
+        document.getElementById("server-container").innerHTML = table;
+    })
+    .catch(err => {
+        document.getElementById("server-container").innerHTML = `<div class="text-red-600">Error: ${err.message}</div>`;
+    });
+}
+</script>
+{% endblock %}

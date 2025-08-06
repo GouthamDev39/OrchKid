@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Server List{% endblock %}
+
+{% block content %}
+
+
+<a href="/add_server_ui" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add New Server</a>
+
+
+<h1 class="text-2xl font-bold mb-6">Registered Servers</h1>
+
+
+<div id="server-container" class="overflow-x-auto">
+    <div class="text-gray-600">Loading servers...</div>
+</div>
+
+<script>
+const token = localStorage.getItem('access_token');
+if (!token) {
+    window.location.href = '/login';
+} else {
+    fetch('/servers/list', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Failed to fetch servers');
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (!data.length) {
+            document.getElementById("server-container").innerHTML = '<div class="text-gray-600">No servers found.</div>';
+            return;
+        }
+
+        const table = `
+        <table class="min-w-full bg-white shadow-md rounded border border-gray-200">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-4 py-2 text-left">ID</th>
+                    <th class="px-4 py-2 text-left">Hostname</th>
+                    <th class="px-4 py-2 text-left">Owner ID</th>
+                    <th class="px-4 py-2 text-left">Username</th>
+                    <th class="px-4 py-2 text-left">Port</th>
+                    <th class="px-4 py-2 text-left">Added By</th>
+                    <th class="px-4 py-2 text-left">Tags</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.map(server => `
+                    <tr class="border-t">
+                        <td class="px-4 py-2 text-blue-600 underline hover:text-blue-800">
+                        <a href="/server/${server.id}">${server.id}</a>
+                        </td>
+                        <td class="px-4 py-2">${server.hostname}</td>
+                        <td class="px-4 py-2">${server.owner_id}</td>
+                        <td class="px-4 py-2">${server.username}</td>
+                        <td class="px-4 py-2">${server.port}</td>
+                        <td class="px-4 py-2">${server.added_by}</td>
+                        <td class="px-4 py-2">${server.tags}</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+        `;
+
+        document.getElementById("server-container").innerHTML = table;
+    })
+    .catch(err => {
+        document.getElementById("server-container").innerHTML = `<div class="text-red-600">Error: ${err.message}</div>`;
+    });
+}
+</script>
+{% endblock %}
+
+

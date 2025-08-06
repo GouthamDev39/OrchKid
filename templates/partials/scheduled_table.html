@@ -1,0 +1,35 @@
+<!-- <div class="overflow-x-auto">
+    <table class="min-w-full bg-white shadow-md rounded border border-gray-200">
+      <thead class="bg-gray-100 text-gray-700">
+        <tr>
+          <th class="px-4 py-2 text-left">ID</th>
+          <th class="px-4 py-2 text-left">My Jobs</th>
+          <th class="px-4 py-2 text-left">My Script</th>
+          <th class="px-4 py-2 text-left">One-Time Run</th>
+          <th class="px-4 py-2 text-left">Timezone</th>
+          <th class="px-4 py-2 text-left">Is Active</th>
+          <th class="px-4 py-2 text-left">Last Run At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in schedules %}
+        <tr class="border-t hover:bg-gray-50">
+          <td class="px-4 py-2">{{ job.id }}</td>
+          <td class="px-4 py-2">{{ job.script_id }}</td>
+          <td class="px-4 py-2">{{ job.cron_expression or "—" }}</td>
+          <td class="px-4 py-2">{{ job.one_time_run or "—" }}</td>
+          <td class="px-4 py-2">{{ job.timezone or "—" }}</td>
+          <td class="px-4 py-2">
+            {% if job.is_active %}
+              <span class="text-green-600 font-semibold">Active</span>
+            {% else %}
+              <span class="text-red-500 font-semibold">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2">{{ job.last_run_at or "Never" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+   -->

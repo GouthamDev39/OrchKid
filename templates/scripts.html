@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Server List{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Registered Scripts</h1>
+
+
+<a href="/add_script_ui" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add New Script</a>
+
+
+<div id="server-container" class="overflow-x-auto">
+    <div class="text-gray-600">Loading servers...</div>
+</div>
+
+<script>
+const token = localStorage.getItem('access_token');
+if (!token) {
+    window.location.href = '/login';
+} else {
+    fetch('scripts/all', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Failed to fetch scripts');
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (!data.length) {
+            document.getElementById("server-container").innerHTML = '<div class="text-gray-600">No servers found.</div>';
+            return;
+        }
+
+        const table = `
+        <table class="min-w-full bg-white shadow-md rounded border border-gray-200">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-4 py-2 text-left">ID</th>
+                    <th class="px-4 py-2 text-left">Name</th>
+                    <th class="px-4 py-2 text-left">Description</th>
+                    <th class="px-4 py-2 text-left">File Name</th>
+                    <th class="px-4 py-2 text-left">Hostname</th>
+                    <th class="px-4 py-2 text-left">Username</th>
+                    <th class="px-4 py-2 text-left">Upload Status</th>
+                    <th class="px-4 py-2 text-left">Added By</th>
+                    <th class="px-4 py-2 text-left">Tags</th>
+                    <th class="px-4 py-2 text-left">History</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.map(script => `
+                    <tr class="border-t">
+                        <td class="px-4 py-2 text-blue-600 underline hover:text-blue-800">
+                        <a href="/script/${script.id}">${script.id}</a>
+                        </td>
+                        <td class="px-4 py-2">${script.name}</td>
+                        <td class="px-4 py-2">${script.description}</td>
+                        <td class="px-4 py-2">${script.file_name}</td>
+                        <td class="px-4 py-2">${script.hostname}</td>
+                        <td class="px-4 py-2">${script.username}</td>
+                        <td class="px-4 py-2">${script.upload_status}</td>
+                        <td class="px-4 py-2">${script.runner}</td>
+                        <td class="px-4 py-2">${script.tags}</td>
+                        <td class="px-4 py-2 text-blue-600 underline hover:text-blue-800">
+                            <a href="/history/${script.id}">History</a></td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+        `;
+
+        document.getElementById("server-container").innerHTML = table;
+    })
+    .catch(err => {
+        document.getElementById("server-container").innerHTML = `<div class="text-red-600">Error: ${err.message}</div>`;
+    });
+}
+</script>
+{% endblock %}

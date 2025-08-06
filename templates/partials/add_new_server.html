@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="text-2xl font-bold mb-6">Add New Server</h1>
+
+<div id="message" class="mb-4"></div>
+
+<form id="add-server-form" class="space-y-4">
+    <div>
+        <label class="block text-sm font-medium text-gray-700" >Hostname</label>
+        <input type="text" name="hostname" required class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Host IP 10.0.0.1">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700" >Username</label>
+        <input type="text" name="username" required class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Username">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Port</label>
+        <input type="number" name="port" required class="w-full px-3 py-2 border border-gray-300 rounded" value="22">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Owner</label>
+        <select name="owner_id" id="owner-select" required class="w-full px-3 py-2 border border-gray-300 rounded">
+            <option value="">Loading...</option>
+        </select>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Key Path</label>
+        <input type="text" name="key_path" required class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Key Path /home/user/.ssh/id_rsa">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Tags</label>
+        <input type="text" name="tags" class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="tags">
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Server</button>
+</form>
+
+<script>
+document.getElementById("add-server-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+        window.location.href = "/login";
+        return;
+    }
+
+    const form = e.target;
+    const body = {
+        hostname: form.hostname.value.trim(),
+        username: form.username.value.trim(),
+        port: Number(form.port.value),
+        owner_id: Number(form.owner_id.value),
+        key_path: form.key_path.value.trim(),
+        tags: form.tags.value.trim()
+    };
+
+    try {
+        const res = await fetch("/servers/add", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        });
+
+        const messageDiv = document.getElementById("message");
+
+        if (!res.ok) {
+            const errData = await res.json();
+            messageDiv.innerHTML = `<div class="text-red-600 font-semibold">Error: ${errData.detail}</div>`;
+            return;
+        }
+
+        const data = await res.json();
+        messageDiv.innerHTML = `<div class="text-green-600 font-semibold">Server added: ${data.hostname}</div>`;
+        form.reset();
+    } catch (error) {
+        document.getElementById("message").innerHTML = `<div class="text-red-600 font-semibold">Unexpected error: ${error.message}</div>`;
+    }
+});
+
+// Fetch users and populate the select dropdown
+fetch('/users', {
+    method: 'GET',
+    headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+    }
+})
+.then(res => res.json())
+.then(data => {
+    const select = document.getElementById('owner-select');
+    data.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.runner;
+        select.appendChild(option);
+    });
+})
+.catch(error => console.error('Error fetching users:', error));
+</script>
+
+{% endblock %}

@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Scheduled Job Details{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10 bg-white p-6 rounded shadow">
+  <h2 class="text-xl font-semibold mb-4">Scheduled Job Details</h2>
+
+  <!-- Job Detail Form -->
+  <div id="job-details">
+    <form id="job-edit-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium">Cron Expression</label>
+        <input type="text" id="cron-expression" class="w-full px-3 py-2 border rounded" >
+      </div>
+
+      <!-- One-time run -->
+      <div>
+        <label class="block text-sm font-medium">One Time Run (Leave empty for recurring)</label>
+        <input type="datetime-local" id="one-time-run" class="w-full px-3 py-2 border rounded">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium">Active</label>
+        <select id="is-active" class="w-full px-3 py-2 border rounded">
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+      </div>
+
+      <div class="flex gap-4">
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          Update
+        </button>
+
+        <button type="button" id="delete-btn"
+                class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+          Delete
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="message" class="mt-4 text-sm text-gray-700"></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const token = localStorage.getItem("access_token");
+  const jobId = {{ job_id | tojson }};
+
+  const cronField = document.getElementById("cron-expression");
+  const oneTimeField = document.getElementById("one-time-run");
+  const activeField = document.getElementById("is-active");
+  const messageDiv = document.getElementById("message");
+
+  const editForm = document.getElementById("job-edit-form");
+  const deleteBtn = document.getElementById("delete-btn");
+  const executeBtn = document.getElementById("execute-btn");
+
+  // Fetch job details on page load
+  async function fetchJobDetails() {
+    try {
+      const res = await fetch(`/scripts/schedule/${jobId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        messageDiv.innerText = err.detail || "Failed to fetch job details.";
+        return;
+      }
+
+      const job = await res.json();
+      cronField.value = job.cron_expression;
+      oneTimeField.value = job.one_time_run
+        ? new Date(job.one_time_run).toISOString().slice(0, 16)
+        : '';
+      activeField.value = job.is_active.toString();
+    } catch (err) {
+      console.error(err);
+      messageDiv.innerText = "Network error.";
+    }
+  }
+
+  fetchJobDetails();
+
+  // Update job
+  editForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      cron_expression: cronField.value,
+      one_time_run: oneTimeField.value ? new Date(oneTimeField.value).toISOString() : null,
+      is_active: activeField.value === "true"
+    };
+
+    try {
+      const res = await fetch(`/scripts/schedule/${jobId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!cronField.value && !oneTimeField.value) {
+            alert("Please provide either a cron expression or a one-time run.");
+            return;
+        }
+      
+      const data = await res.json();
+
+      if (!res.ok) {
+        messageDiv.innerText = data.detail || "Update failed.";
+        messageDiv.classList.add("text-red-600");
+        return;
+      }
+
+      messageDiv.innerText = `✅ Job ID ${data.id} updated successfully.`;
+      messageDiv.classList.remove("text-red-600");
+      messageDiv.classList.add("text-green-600");
+    } catch (err) {
+      console.error(err);
+      messageDiv.innerText = "Network error during update.";
+    }
+  });
+
+  // Delete job
+  deleteBtn.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to delete this job?")) return;
+
+    try {
+      const res = await fetch(`/scripts/schedule/${jobId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (res.status === 204) {
+        messageDiv.innerText = `✅ Job ID ${jobId} deleted.`;
+        window.location.href = "/home_ui"; // Redirect after delete
+      } else {
+        const err = await res.json();
+        messageDiv.innerText = err.detail || "Failed to delete job.";
+      }
+    } catch (err) {
+      console.error(err);
+      messageDiv.innerText = "Network error during deletion.";
+    }
+  });
+
+});
+</script>
+{% endblock %}

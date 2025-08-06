@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Server Details{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto mt-10 bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Server Details</h2>
+
+    <div id="server-info" class="text-sm text-gray-800 bg-gray-50 p-4 rounded border mb-4">Loading...</div>
+
+    <form id="edit-server-form" class="mb-4 space-y-3">
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Owner ID</label>
+            <input type="number" id="owner_id" name="owner_id" class="w-full px-3 py-2 border rounded" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Port</label>
+            <input type="number" id="port" name="port" class="w-full px-3 py-2 border rounded" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
+            <input type="text" id="tags" name="tags" class="w-full px-3 py-2 border rounded">
+        </div>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update Server</button>
+    </form>
+
+    <button id="delete-button" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete Server</button>
+
+    <div id="action-status" class="mt-4 text-sm font-medium"></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const token = localStorage.getItem("access_token");
+    const serverId = window.location.pathname.split("/").pop();
+    const infoDiv = document.getElementById("server-info");
+    const statusDiv = document.getElementById("action-status");
+
+    const ownerInput = document.getElementById("owner_id");
+    const portInput = document.getElementById("port");
+    const tagsInput = document.getElementById("tags");
+
+    // Load server info
+    try {
+        const res = await fetch(`/servers/${serverId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            infoDiv.innerText = err.detail || "Server not found.";
+            return;
+        }
+
+        const server = await res.json();
+
+        // Fill data into form
+        ownerInput.value = server.owner_id || "";
+        portInput.value = server.port || "";
+        tagsInput.value = server.tags || "";
+
+        // Render info card
+        infoDiv.innerHTML = `
+            <strong>ID:</strong> ${server.id}<br>
+            <strong>Hostname:</strong> ${server.hostname}<br>
+            <strong>Username:</strong> ${server.username}<br>
+            <strong>Owner ID:</strong> ${server.owner_id || "N/A"}<br>
+            <strong>Port:</strong> ${server.port}<br>
+            <strong>Tags:</strong> ${server.tags || "None"}
+        `;
+    } catch (err) {
+        console.error(err);
+        infoDiv.innerText = "Error fetching server info.";
+    }
+
+    // Handle update
+    document.getElementById("edit-server-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const body = {
+            owner_id: parseInt(ownerInput.value),
+            port: parseInt(portInput.value),
+            tags: tagsInput.value.trim()
+        };
+
+        try {
+            const res = await fetch(`/servers/edit/${serverId}`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(body)
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw data;
+
+            statusDiv.innerText = `✅ Server updated successfully.`;
+            statusDiv.classList.remove("text-red-600");
+            statusDiv.classList.add("text-green-600");
+        } catch (err) {
+            statusDiv.innerText = `❌ Update failed: ${err.detail || err.message}`;
+            statusDiv.classList.remove("text-green-600");
+            statusDiv.classList.add("text-red-600");
+        }
+    });
+
+    // Handle delete
+    document.getElementById("delete-button").addEventListener("click", async () => {
+        if (!confirm("Are you sure you want to delete this server?")) return;
+
+        try {
+            const res = await fetch(`/servers/delete/${serverId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw err;
+            }
+
+            statusDiv.innerText = "✅ Server deleted successfully. Redirecting...";
+            statusDiv.classList.remove("text-red-600");
+            statusDiv.classList.add("text-green-600");
+
+            setTimeout(() => {
+                window.location.href = "/servers_ui"; // Update this as needed
+            }, 1500);
+        } catch (err) {
+            statusDiv.innerText = `❌ Delete failed: ${err.detail || err.message}`;
+            statusDiv.classList.remove("text-green-600");
+            statusDiv.classList.add("text-red-600");
+        }
+    });
+});
+</script>
+{% endblock %}

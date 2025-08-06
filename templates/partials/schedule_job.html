@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto mt-10 bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Schedule a Job</h2>
+    <form id="schedule-form" class="space-y-4">
+        <!-- Script selector -->
+        <label for="script_id" class="block text-sm font-medium text-gray-700">Select Script</label>
+        <select name="script_id" id="script-select" required class="w-full px-3 py-2 border rounded">
+            <option value="">Loading scripts...</option>
+        </select>
+
+        <!-- Cron expression -->
+        <input type="text" name="cron_expression" placeholder="Cron Expression (e.g. */5 * * * *)" class="w-full px-3 py-2 border rounded">
+
+        <!-- One-time run -->
+        <input type="datetime-local" name="one_time_run" placeholder="One-time" class="w-full px-3 py-2 border rounded">
+
+        <!-- Timezone -->
+        <input type="text" name="timezone" placeholder="Timezone (e.g. UTC, Asia/Kolkata)" class="w-full px-3 py-2 border rounded">
+
+        <!-- Active toggle -->
+        <label class="flex items-center space-x-2">
+            <input type="checkbox" name="is_active" checked class="rounded border-gray-300">
+            <span>Activate job</span>
+        </label>
+
+        <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Schedule Job</button>
+    </form>
+    <div id="schedule-result" class="mt-4 text-sm text-gray-700"></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const token = localStorage.getItem("access_token");
+
+    // Load script options
+    try {
+        const res = await fetch("scripts/all", {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        const scripts = await res.json();
+        const select = document.getElementById("script-select");
+        select.innerHTML = scripts.map(s =>
+            `<option value="${s.id}">${s.name} (${s.file_name})</option>`
+        ).join("");
+    } catch (err) {
+        document.getElementById("script-select").innerHTML = `<option value="">Error loading scripts</option>`;
+        console.error("Failed to load scripts:", err);
+    }
+
+    // Form submission handler
+    document.getElementById("schedule-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = e.target;
+
+        const cron = form.cron_expression.value.trim();
+        const oneTime = form.one_time_run.value ? new Date(form.one_time_run.value).toISOString() : null;
+
+
+        // 🚨 Validation: require at least one of the two
+        if (!cron && !oneTime) {
+            alert("Please provide either a cron expression or a one-time run.");
+            return;
+        }
+
+        const payload = {
+            script_id: parseInt(form.script_id.value),
+            cron_expression: cron,
+            one_time_run : oneTime,
+            timezone: form.timezone.value.trim(),
+            is_active: form.is_active.checked
+        };
+
+        try {
+            const res = await fetch("scripts/schedule", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await res.json();
+            const msgBox = document.getElementById("schedule-result");
+            if (res.ok) {
+                msgBox.innerText = `Job scheduled (ID: ${result.id})`;
+                form.reset();
+            } else {
+                let errorMessage = "Scheduling failed.";
+
+                if (result.detail) {
+                    if (typeof result.detail === "string") {
+                        errorMessage = result.detail;
+                    } else if (Array.isArray(result.detail)) {
+                        // Validation error (FastAPI style)
+                        errorMessage = result.detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join('\n');
+                    } else {
+                        errorMessage = JSON.stringify(result.detail, null, 2);
+                    }
+                }
+                msgBox.innerText = errorMessage;
+            }
+        } catch (err) {
+            console.error("Error:", err);
+            document.getElementById("schedule-result").innerText = "Request failed.";
+        }
+
+    });
+});
+</script>
+{% endblock %}

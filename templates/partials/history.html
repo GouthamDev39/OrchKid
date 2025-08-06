@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto mt-10">
+    <h2 class="text-2xl font-bold mb-4">Job History for Script ID: {{ script_id }}</h2>
+
+    <div id="job-history-table" class="overflow-x-auto bg-white shadow-md rounded-lg hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Command</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Executed At</th>
+                </tr>
+            </thead>
+            <tbody id="job-history-body" class="bg-white divide-y divide-gray-200">
+                <!-- JS will inject rows here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="no-data" class="text-center text-gray-600 mt-6 hidden">
+        No job history found for this script.
+    </div>
+
+    <div id="loading" class="text-center text-gray-600 mt-6">
+        Loading job history...
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+
+    const token = localStorage.getItem("access_token");
+    const scriptId = {{ script_id }};
+    const tableContainer = document.getElementById("job-history-table");
+    const tableBody = document.getElementById("job-history-body");
+    const loading = document.getElementById("loading");
+    const noData = document.getElementById("no-data");
+
+    try {
+        const response = await fetch(`/scripts/history/${scriptId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+        loading.classList.add("hidden");
+
+        if (data.length === 0) {
+            noData.classList.remove("hidden");
+            return;
+        }
+
+        data.forEach(job => {
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${job.id}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${job.command}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        job.command_status === 'success'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                    }">${job.command_status}</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${job.executed_at || '—'}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        tableContainer.classList.remove("hidden");
+
+    } catch (err) {
+        console.error("Failed to load job history:", err);
+        loading.textContent = "Failed to load job history.";
+    }
+});
+</script>
+{% endblock %}

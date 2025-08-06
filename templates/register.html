@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register Runner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-gray-700 text-center">Register Runner</h2>
+
+    <form id="registerForm" class="space-y-4">
+      <div>
+        <label for="runner" class="block text-sm font-medium text-gray-600">Runner Name</label>
+        <input type="text" id="runner" name="runner" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-300" />
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-600">Password</label>
+        <input type="password" id="password" name="password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-300" />
+      </div>
+
+      <div class="flex items-center">
+        <input type="checkbox" id="is_superuser" name="is_superuser" class="mr-2" />
+        <label for="is_superuser" class="text-sm text-gray-600">Is Superuser?</label>
+      </div>
+
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-200">Register</button>
+    </form>
+
+    <div id="responseMessage" class="mt-4 text-center text-sm"></div>
+  </div>
+
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const runner = document.getElementById('runner').value;
+      const password = document.getElementById('password').value;
+      const is_superuser = document.getElementById('is_superuser').checked;
+
+      const payload = { runner, password, is_superuser };
+
+      try {
+        const response = await fetch('/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const messageBox = document.getElementById('responseMessage');
+
+        if (response.ok) {
+          const data = await response.json();
+          messageBox.innerHTML = `<span class="text-green-600 font-medium">Runner ${data.runner} registered successfully!</span>`;
+          document.getElementById('registerForm').reset();
+        } else {
+          const error = await response.json();
+          messageBox.innerHTML = `<span class="text-red-600 font-medium">${error.detail}</span>`;
+        }
+      } catch (err) {
+        document.getElementById('responseMessage').innerHTML = '<span class="text-red-600">Something went wrong.</span>';
+        console.error(err);
+      }
+    });
+  </script>
+
+
+</body>
+</html>
